@@ -1,0 +1,379 @@
+/* slide-comments overlay — scoped under .sc-* to avoid clashing with host CSS. */
+
+:root {
+  /* Variables live on :root so elements appended outside .sc-root (e.g. the
+     comment popover, which is appended to <body>) still inherit them. */
+  --sc-accent: #2f6f4e;
+  --sc-accent-soft: #dfeee5;
+  --sc-danger: #b14a3a;
+  --sc-warn: #c08b1c;
+  --sc-rule: #c8d3cc;
+  --sc-ink: #1a1a1a;
+  --sc-paper: #ffffff;
+  --sc-subtle: #58685e;
+}
+
+.sc-root,
+.sc-popover {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: var(--sc-ink);
+}
+
+/* --- Toolbar ------------------------------------------------------------- */
+.sc-toolbar {
+  position: fixed;
+  right: 16px;
+  top: 16px;
+  z-index: 2147483600;
+  display: flex;
+  gap: 6px;
+  padding: 6px 6px 6px 10px;
+  background: var(--sc-paper);
+  border: 1px solid var(--sc-rule);
+  border-radius: 999px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.14);
+  align-items: center;
+  font-size: 12px;
+}
+.sc-toolbar.sc-dragging { user-select: none; cursor: grabbing; }
+.sc-toolbar .sc-grip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 18px;
+  margin-right: 2px;
+  color: var(--sc-subtle);
+  cursor: grab;
+  font-size: 14px;
+  line-height: 1;
+  letter-spacing: -2px;
+  user-select: none;
+}
+.sc-toolbar .sc-grip:active { cursor: grabbing; }
+.sc-toolbar button {
+  font: inherit;
+  border: 1px solid transparent;
+  background: transparent;
+  padding: 6px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  color: var(--sc-ink);
+  line-height: 1;
+}
+.sc-toolbar button:hover {
+  background: var(--sc-accent-soft);
+}
+.sc-toolbar button.sc-active {
+  background: var(--sc-accent);
+  color: #fff;
+}
+.sc-toolbar button.sc-pill {
+  border: 1px solid var(--sc-rule);
+}
+.sc-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  color: var(--sc-subtle);
+  font-size: 11px;
+}
+.sc-status .sc-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--sc-accent);
+}
+.sc-status.sc-saving .sc-dot { background: var(--sc-warn); }
+.sc-status.sc-error .sc-dot { background: var(--sc-danger); }
+
+/* --- Banner -------------------------------------------------------------- */
+.sc-banner {
+  position: fixed;
+  left: 50%;
+  top: 16px;
+  transform: translateX(-50%);
+  z-index: 2147483601;
+  background: var(--sc-danger);
+  color: #fff;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+  max-width: 80vw;
+  display: none;
+}
+.sc-banner.sc-warn { background: var(--sc-warn); }
+.sc-banner.sc-info { background: var(--sc-accent); }
+.sc-banner.sc-visible { display: block; }
+.sc-banner button {
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  border: 0;
+  padding: 3px 8px;
+  margin-left: 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font: inherit;
+}
+
+/* --- Mode cursor cue ----------------------------------------------------- */
+body.sc-mode-slide   .reveal { cursor: crosshair; }
+body.sc-mode-element .reveal { cursor: cell; }
+body.sc-mode-pin     .reveal { cursor: crosshair; }
+
+.sc-element-hover {
+  outline: 2px dashed var(--sc-accent) !important;
+  outline-offset: 2px !important;
+  cursor: cell !important;
+}
+
+/* --- Pins on slide ------------------------------------------------------- */
+.sc-pin {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--sc-accent);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  border: 2px solid #fff;
+  pointer-events: auto;
+  cursor: pointer;
+  z-index: 100;
+}
+.sc-pin.sc-pin-focus {
+  outline: 3px solid var(--sc-accent-soft);
+}
+
+/* --- Comment popover ----------------------------------------------------- */
+.sc-popover {
+  position: fixed;
+  z-index: 2147483602;
+  background: var(--sc-paper);
+  border: 1px solid var(--sc-rule);
+  border-radius: 8px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.18);
+  padding: 10px;
+  width: 320px;
+  font-size: 13px;
+}
+.sc-popover header {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--sc-subtle);
+  margin-bottom: 6px;
+}
+.sc-popover textarea {
+  width: 100%;
+  min-height: 80px;
+  resize: vertical;
+  border: 1px solid var(--sc-rule);
+  border-radius: 4px;
+  padding: 6px 8px;
+  font: inherit;
+  box-sizing: border-box;
+}
+.sc-popover .sc-preview {
+  margin-bottom: 8px;
+  padding: 6px;
+  border: 1px dashed var(--sc-rule);
+  border-radius: 4px;
+  background: #fafafa;
+  text-align: center;
+}
+.sc-popover .sc-preview img {
+  max-width: 100%;
+  max-height: 160px;
+  display: inline-block;
+  vertical-align: middle;
+}
+.sc-popover .sc-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 8px;
+}
+.sc-popover button {
+  font: inherit;
+  border: 1px solid var(--sc-rule);
+  background: var(--sc-paper);
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.sc-popover button.sc-primary {
+  background: var(--sc-accent);
+  color: #fff;
+  border-color: var(--sc-accent);
+}
+.sc-popover button.sc-danger {
+  color: var(--sc-danger);
+}
+
+/* --- Panel --------------------------------------------------------------- */
+.sc-panel {
+  position: fixed;
+  right: 12px;
+  top: 64px;
+  width: 340px;
+  max-height: calc(100vh - 130px);
+  background: var(--sc-paper);
+  border: 1px solid var(--sc-rule);
+  border-radius: 8px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.16);
+  z-index: 2147483599;
+  display: none;
+  flex-direction: column;
+  font-size: 13px;
+  overflow: hidden;
+}
+.sc-panel.sc-visible { display: flex; }
+.sc-panel.sc-dragging { user-select: none; }
+.sc-panel header {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--sc-rule);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: grab;
+  background: linear-gradient(180deg, #fbfdfb 0%, #f4f8f4 100%);
+  user-select: none;
+}
+.sc-panel header:active { cursor: grabbing; }
+.sc-panel header .sc-drag-hint {
+  font-size: 10px;
+  color: var(--sc-subtle);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-right: 6px;
+}
+.sc-panel header strong { font-size: 14px; }
+.sc-panel .sc-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 10px 80px;
+}
+.sc-panel .sc-empty {
+  color: var(--sc-subtle);
+  font-style: italic;
+  padding: 20px 6px;
+  text-align: center;
+}
+.sc-panel .sc-slide-group {
+  margin-bottom: 12px;
+}
+.sc-panel .sc-slide-head {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--sc-accent);
+  margin: 8px 4px 4px;
+  border-top: 1px solid var(--sc-rule);
+  padding-top: 8px;
+}
+.sc-card {
+  border: 1px solid var(--sc-rule);
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin: 6px 0;
+  background: #fbfdfb;
+}
+.sc-card .sc-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  color: var(--sc-subtle);
+  margin-bottom: 4px;
+}
+.sc-card .sc-type {
+  background: var(--sc-accent-soft);
+  color: var(--sc-accent);
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.sc-card .sc-body { line-height: 1.4; white-space: pre-wrap; }
+.sc-card .sc-snippet {
+  font-size: 11px;
+  color: var(--sc-subtle);
+  font-style: italic;
+  margin-top: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.sc-card .sc-controls {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+.sc-card .sc-controls button {
+  font: inherit;
+  font-size: 11px;
+  background: transparent;
+  border: 1px solid var(--sc-rule);
+  border-radius: 4px;
+  padding: 2px 8px;
+  cursor: pointer;
+}
+.sc-card .sc-controls button:hover { background: var(--sc-accent-soft); }
+.sc-card.sc-resolved {
+  opacity: 0.55;
+}
+
+/* --- Comment indicator badges ------------------------------------------ */
+.sc-has-comment {
+  position: relative;
+}
+.sc-has-comment::after {
+  content: "";
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--sc-accent);
+  border: 2px solid var(--sc-paper);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  pointer-events: none;
+  z-index: 50;
+}
+section.sc-has-comment::after {
+  top: 12px;
+  right: 14px;
+  width: 13px;
+  height: 13px;
+}
+
+/* --- Direct-edit mode --------------------------------------------------- */
+.sc-editing {
+  outline: 2px solid var(--sc-accent) !important;
+  outline-offset: 4px !important;
+  background: rgba(47, 111, 78, 0.06) !important;
+  cursor: text;
+  min-height: 1em;
+}
+.sc-edit-saved {
+  animation: sc-edit-flash 0.6s ease-out;
+}
+@keyframes sc-edit-flash {
+  0%   { background: rgba(47, 111, 78, 0.30); }
+  100% { background: transparent; }
+}
+
+/* --- Misc ---------------------------------------------------------------- */
+.sc-hidden { display: none !important; }
