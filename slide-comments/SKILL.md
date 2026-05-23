@@ -1,19 +1,20 @@
 ---
 name: revealjs-slide-comments
-description: Use when enabling or working with the reusable slide-comments overlay for Reveal.js HTML decks, including launching the local server, reading comments sidecars, applying comments, and preserving data-cid anchors.
+description: Use when enabling or working with the reusable slide-comments overlay for Reveal.js HTML decks, including launching the local server, inspecting comment sidecars, applying comments from a deck, handling pasted-image comments, and preserving data-cid anchors.
 ---
 
 # Reveal.js Slide Comments
 
-Use this skill when the user asks to enable slide comments, launch the comments overlay, inspect comment sidecars, or apply comments from a Reveal.js deck.
-
 ## Launching
 
-Preferred command from a project root:
+Set `SKILL_DIR` to the directory containing this `SKILL.md`, then run the bundled server from any workspace:
 
 ```sh
-python3 revealjs-tools/slide-comments/server.py /absolute/path/to/deck.html
+SKILL_DIR=/absolute/path/to/this-skill
+python3 "$SKILL_DIR/server.py" /absolute/path/to/deck.html
 ```
+
+Requires Python 3 and a local browser. Pin snapshots load `html2canvas` from a CDN.
 
 Options:
 
@@ -46,7 +47,7 @@ Comment types:
 - `pin`: use `slideCid`, `position`, `nearestSelector`, `nearestText`, and the PNG snapshot under `deck.comments/`.
 - `image`: inspect the pasted image, move it from `deck.comments/pasted/` into a durable asset folder, then add it to the slide.
 
-Always preserve existing `data-cid` attributes. If replacing or moving content that remains the same conceptual slide/element, carry the existing CID onto the new HTML.
+Always preserve existing `data-cid` attributes because sidecar comments and pin snapshots anchor to those IDs. If replacing or moving content that remains the same conceptual slide/element, carry the existing CID onto the new HTML.
 
 ## Closing Comments
 

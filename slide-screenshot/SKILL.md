@@ -1,19 +1,22 @@
 ---
 name: revealjs-slide-screenshot
-description: Use when verifying a Reveal.js slide visually (after a CSS or HTML edit), capturing a slide at a specific fragment state, or pinpointing which element on a slide is responsible for an overflow/layout issue.
+description: Use when verifying a Reveal.js slide visually after a CSS or HTML edit, capturing a slide at a specific fragment state, seeing the rendered result, or pinpointing which element on a slide causes an overflow/layout issue.
 ---
 
 # Reveal.js Slide Screenshot & Inspector
 
-Use this skill after editing a Reveal.js deck when you need to *see* the result rather than just trust geometry numbers — or when `check-overflow` reports a finding and you need to know which box is the cause.
-
 ## Command
 
+Set `SKILL_DIR` to the directory containing this `SKILL.md`, then run the bundled screenshot/inspection script from any workspace:
+
 ```sh
-node revealjs-tools/slide-screenshot/scripts/slide_screenshot.js path/to/deck.html --slides 6,10,14
+SKILL_DIR=/absolute/path/to/this-skill
+node "$SKILL_DIR/scripts/slide_screenshot.js" path/to/deck.html --slides 6,10,14
 ```
 
 Local file paths spin up a temporary static server rooted at the deck's directory so relative assets resolve; URLs are loaded directly.
+
+Requires Node.js and Puppeteer. If Puppeteer is not installed normally, the script also tries Decktape's bundled Puppeteer.
 
 ## Modes
 
@@ -41,17 +44,17 @@ Prints a JSON dump of each matched element's `data-cid`, tag, class string, and 
 
 ## When To Use This vs Other Tools
 
-- **`check-overflow`** — first line of defence after any layout edit; reports geometry findings.
-- **`slide-screenshot` (this skill)** — when the visual outcome matters (CSS changes, image inserts, animation start state) or when you need to find *which* element is at fault.
-- **`slide-comments` overlay** — for collecting human comments on a live deck during review; not for post-edit verification.
+- **`revealjs-overflow-checker`** (`check_overflow.py`) — first line of defence after any layout edit; reports geometry findings.
+- **`revealjs-slide-screenshot`** (this skill) — when the visual outcome matters (CSS changes, image inserts, animation start state) or when you need to find *which* element is at fault.
+- **`revealjs-slide-comments`** overlay — for collecting human comments on a live deck during review; not for post-edit verification.
 
 A common flow when fixing a layout regression:
 
-1. `check-overflow --slides N` → reports `OVERFLOW 65px (div.instr)`.
-2. `slide-screenshot --slides N --inspect ".instr > *"` → see which child sits beyond `bottom: 800` and by how much.
+1. Run `revealjs-overflow-checker` with `--slides N` → reports `OVERFLOW 65px (div.instr)`.
+2. Run this skill with `--slides N --inspect ".instr > *"` → see which child sits beyond `bottom: 800` and by how much.
 3. Edit the offending element.
-4. `slide-screenshot --slides N` → confirm the visual fix.
-5. `check-overflow --slides N` → confirm no regressions.
+4. Run this skill with `--slides N` → confirm the visual fix.
+5. Rerun `revealjs-overflow-checker` with `--slides N` → confirm no regressions.
 
 ## Notes
 

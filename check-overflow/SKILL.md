@@ -1,19 +1,20 @@
 ---
 name: revealjs-overflow-checker
-description: Use when validating Reveal.js HTML decks for slide content that is clipped, off-screen, touching viewport edges, or likely to overflow after fragments render.
+description: Use when validating Reveal.js HTML decks for slide content that is clipped, off-screen, touching viewport edges, likely to overflow after fragments render, or when the user asks whether slides fit across one or more HTML decks.
 ---
 
 # Reveal.js Overflow Checker
 
-Use this skill when the user asks whether Reveal.js slides fit, mentions clipped slide content, or wants overflow checks run across one or more HTML decks.
-
 ## Command
 
-Run the bundled checker from the project root:
+Set `SKILL_DIR` to the directory containing this `SKILL.md`, then run the bundled checker from any workspace:
 
 ```sh
-python3 revealjs-tools/check-overflow/scripts/check_overflow.py path/to/deck.html --bg "#faf6f1"
+SKILL_DIR=/absolute/path/to/this-skill
+python3 "$SKILL_DIR/scripts/check_overflow.py" path/to/deck.html --bg "#faf6f1"
 ```
+
+Requires Node.js and Puppeteer. If Puppeteer is not installed normally, the script also tries Decktape's bundled Puppeteer.
 
 For non-default decks:
 

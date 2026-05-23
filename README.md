@@ -93,6 +93,42 @@ Each tool folder contains a `SKILL.md` for AI agents:
 These describe when to use the tool, the exact commands, and how to interpret
 or apply the results.
 
+### Installing Skills
+
+Install each skill folder into the directory your agent scans for skills. For
+Codex this is usually `~/.codex/skills`; for Claude this is often
+`~/.claude/skills`.
+
+Copy folders, using destination names that match the skill names:
+
+```sh
+SKILLS_DIR="${CODEX_HOME:-$HOME/.codex}/skills"
+mkdir -p "$SKILLS_DIR"
+mkdir -p \
+  "$SKILLS_DIR/revealjs-overflow-checker" \
+  "$SKILLS_DIR/revealjs-references" \
+  "$SKILLS_DIR/revealjs-slide-comments" \
+  "$SKILLS_DIR/revealjs-slide-screenshot"
+cp -R check-overflow/. "$SKILLS_DIR/revealjs-overflow-checker/"
+cp -R references/. "$SKILLS_DIR/revealjs-references/"
+cp -R slide-comments/. "$SKILLS_DIR/revealjs-slide-comments/"
+cp -R slide-screenshot/. "$SKILLS_DIR/revealjs-slide-screenshot/"
+```
+
+Or symlink them so local edits in this checkout are picked up immediately:
+
+```sh
+SKILLS_DIR="${CODEX_HOME:-$HOME/.codex}/skills"
+mkdir -p "$SKILLS_DIR"
+ln -sfn "$PWD/check-overflow" "$SKILLS_DIR/revealjs-overflow-checker"
+ln -sfn "$PWD/references" "$SKILLS_DIR/revealjs-references"
+ln -sfn "$PWD/slide-comments" "$SKILLS_DIR/revealjs-slide-comments"
+ln -sfn "$PWD/slide-screenshot" "$SKILLS_DIR/revealjs-slide-screenshot"
+```
+
+Set `SKILLS_DIR` explicitly when installing for an agent that uses a different
+location.
+
 ## Dependencies
 
 - Python 3

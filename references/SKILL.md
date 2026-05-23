@@ -1,19 +1,17 @@
 ---
 name: revealjs-references
-description: Use when adding, validating, or repairing the reusable references.json + citations.js citation system for Reveal.js HTML decks, including inline cite tags and auto-generated paginated bibliography slides.
+description: Use when adding, validating, or repairing the reusable references.json + citations.js citation system for Reveal.js HTML decks, including inline cite tags, generated bibliographies, citation-key validation, and auto-generated paginated bibliography slides.
 ---
 
 # Reveal.js References
 
-Use this skill when a Reveal.js deck needs inline citations, a generated
-bibliography, or validation of citation keys against `references.json`.
-
 ## Install In A Deck
 
-Copy the bundled script next to the deck HTML:
+Set `SKILL_DIR` to the directory containing this `SKILL.md`, then copy the bundled script next to the deck HTML:
 
 ```sh
-cp revealjs-tools/references/scripts/citations.js path/to/deck-dir/citations.js
+SKILL_DIR=/absolute/path/to/this-skill
+cp "$SKILL_DIR/scripts/citations.js" path/to/deck-dir/citations.js
 ```
 
 Create or update `references.json` in the same directory as the deck. Each key
@@ -70,5 +68,7 @@ Load the script after Reveal.js and after the bibliography placeholder exists:
 4. Confirm bibliography slides are generated and paginated after `Reveal.sync()`.
 
 When editing decks, preserve existing `<cite key="...">` elements unless the
-source claim is being removed. Do not hand-write the bibliography in static
-HTML unless the user explicitly wants to stop using the citation system.
+source claim is being removed, because those tags are the source of truth for
+used-reference validation. Do not hand-write the bibliography in static HTML
+unless the user explicitly wants to stop using the citation system; `citations.js`
+owns bibliography generation and pagination.
