@@ -64,6 +64,23 @@ node revealjs-tools/slide-screenshot/scripts/slide_screenshot.js path/to/deck.ht
 node revealjs-tools/slide-screenshot/scripts/slide_screenshot.js path/to/deck.html --slides 24 --inspect ".instr > *"
 ```
 
+### `references`
+
+A tiny `references.json` + `citations.js` system for inline citations and an
+auto-generated paginated bibliography slide.
+
+```html
+<cite key="smith2020"></cite>
+<cite key="smith2020" parens></cite>
+```
+
+Copy the script into the deck directory, keep `references.json` next to the
+deck, add `<div id="bibliography"></div>` on a references slide, then load:
+
+```html
+<script src="citations.js"></script>
+```
+
 ## Agent Skills
 
 Each tool folder contains a `SKILL.md` for AI agents:
@@ -71,6 +88,7 @@ Each tool folder contains a `SKILL.md` for AI agents:
 - `check-overflow/SKILL.md`
 - `slide-comments/SKILL.md`
 - `slide-screenshot/SKILL.md`
+- `references/SKILL.md`
 
 These describe when to use the tool, the exact commands, and how to interpret
 or apply the results.
