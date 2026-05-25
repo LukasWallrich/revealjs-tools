@@ -81,6 +81,22 @@ deck, add `<div id="bibliography"></div>` on a references slide, then load:
 <script src="citations.js"></script>
 ```
 
+### `references-verify`
+
+Checks the DOIs and metadata in a `references.json` against Crossref. Catches
+DOIs that resolve but point at the wrong paper (the kind of slip you never spot
+by eye), DOIs that do not resolve at all, and titles/authors/years that
+disagree with Crossref.
+
+```sh
+python3 revealjs-tools/references-verify/scripts/verify_references.py path/to/references.json
+python3 revealjs-tools/references-verify/scripts/verify_references.py site/   # recurse
+```
+
+`--suggest-missing` queries Crossref for entries with no DOI and prints
+candidate DOIs (it never writes them back). Pure standard library; needs
+network access. Set `CROSSREF_MAILTO` to join Crossref's polite pool.
+
 ## Agent Skills
 
 Each tool folder contains a `SKILL.md` for AI agents:
@@ -89,6 +105,7 @@ Each tool folder contains a `SKILL.md` for AI agents:
 - `slide-comments/SKILL.md`
 - `slide-screenshot/SKILL.md`
 - `references/SKILL.md`
+- `references-verify/SKILL.md`
 
 These describe when to use the tool, the exact commands, and how to interpret
 or apply the results.
@@ -107,10 +124,12 @@ mkdir -p "$SKILLS_DIR"
 mkdir -p \
   "$SKILLS_DIR/revealjs-overflow-checker" \
   "$SKILLS_DIR/revealjs-references" \
+  "$SKILLS_DIR/revealjs-references-verify" \
   "$SKILLS_DIR/revealjs-slide-comments" \
   "$SKILLS_DIR/revealjs-slide-screenshot"
 cp -R check-overflow/. "$SKILLS_DIR/revealjs-overflow-checker/"
 cp -R references/. "$SKILLS_DIR/revealjs-references/"
+cp -R references-verify/. "$SKILLS_DIR/revealjs-references-verify/"
 cp -R slide-comments/. "$SKILLS_DIR/revealjs-slide-comments/"
 cp -R slide-screenshot/. "$SKILLS_DIR/revealjs-slide-screenshot/"
 ```
@@ -122,6 +141,7 @@ SKILLS_DIR="${CODEX_HOME:-$HOME/.codex}/skills"
 mkdir -p "$SKILLS_DIR"
 ln -sfn "$PWD/check-overflow" "$SKILLS_DIR/revealjs-overflow-checker"
 ln -sfn "$PWD/references" "$SKILLS_DIR/revealjs-references"
+ln -sfn "$PWD/references-verify" "$SKILLS_DIR/revealjs-references-verify"
 ln -sfn "$PWD/slide-comments" "$SKILLS_DIR/revealjs-slide-comments"
 ln -sfn "$PWD/slide-screenshot" "$SKILLS_DIR/revealjs-slide-screenshot"
 ```
