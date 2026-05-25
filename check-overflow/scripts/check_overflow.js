@@ -271,7 +271,15 @@ async function inspectSlide(page, slideNumber, tolerancePx) {
 }
 
 async function edgeScan(page, bgRgb, margin, toleranceColor) {
-  const screenshot = await page.screenshot({ encoding: 'binary' });
+  // Pass an explicit clip and disable beyond-viewport capture. Without these,
+  // new headless Chromium can hang on `Page.captureScreenshot` ("timed out"),
+  // especially across a long loop of slides. The slide-screenshot tool
+  // screenshots with a clip for the same reason.
+  const screenshot = await page.screenshot({
+    clip: { x: 0, y: 0, width, height },
+    captureBeyondViewport: false,
+    encoding: 'binary',
+  });
   // Avoid a project dependency for PNG parsing. Canvas is available in Chromium;
   // use it to sample the screenshot after loading it into an ImageBitmap.
   return page.evaluate(async ({ screenshotBytes, bgRgb, margin, toleranceColor }) => {
@@ -314,10 +322,16 @@ async function edgeScan(page, bgRgb, margin, toleranceColor) {
   const browser = await puppeteer.launch({
     headless: 'new',
     args: ['--allow-file-access-from-files'],
+    // Bound every CDP command. Headless Chromium's screenshot can wedge (the
+    // browser dies while `Page.captureScreenshot` is pending); the default
+    // 180s protocolTimeout then stalls the whole run. 45s fails fast while
+    // leaving ample headroom for navigation/evaluate on heavy decks.
+    protocolTimeout: 45000,
   });
 
   let fail = 0;
   let warn = 0;
+  let edgeFails = 0;
   try {
     const page = await browser.newPage();
     await page.setViewport({ width, height, deviceScaleFactor: 1 });
@@ -338,7 +352,17 @@ async function edgeScan(page, bgRgb, margin, toleranceColor) {
       const data = await inspectSlide(page, i, tolerance);
       if (!data) continue;
       let edge = {};
-      if (!noScreenshot) edge = await edgeScan(page, bgRgb, edgeMargin, 18);
+      // The edge-pixel scan is a secondary guard; a screenshot failure must not
+      // crash the run, so degrade to a note and keep the DOM findings. Once a
+      // screenshot has failed, the browser's capture path is wedged for the
+      // session — skip the rest instead of paying the timeout on every slide.
+      if (!noScreenshot && edgeFails === 0) {
+        try {
+          edge = await edgeScan(page, bgRgb, edgeMargin, 18);
+        } catch {
+          edgeFails++;
+        }
+      }
       reports.push({ slide: i, ...data, edge });
     }
 
@@ -369,6 +393,9 @@ async function edgeScan(page, bgRgb, margin, toleranceColor) {
       else console.log(`slide ${r.slide}: ok`);
     }
 
+    if (edgeFails) {
+      console.log('note: screenshot failed (browser capture wedged); edge-pixel scan skipped for this run — DOM/clip checks still ran. Re-run, or restart if it persists.');
+    }
     const scope = slideSpec ? `${reports.length}/${total} selected slides` : `${reports.length} slides`;
     console.log(`\n${scope} · ${fail} overflow/clipping findings · ${warn} heading-wrap warnings`);
     process.exitCode = fail ? 1 : 0;
