@@ -43,6 +43,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -276,6 +277,61 @@ def collect_files(paths) -> list:
     return unique
 
 
+# ── validation stamp ─────────────────────────────────────────────────────────
+# A clean verification writes `<name>.verified.json` beside the references file,
+# recording a hash of the *data* (not its formatting). `--check` recomputes the
+# hash offline and reports VALIDATED / STALE / UNVERIFIED — a fast, network-free
+# guard to run (e.g. in a pre-push hook) before shipping a deck.
+
+def canonical_hash(data: dict) -> str:
+    blob = json.dumps(data, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+    return hashlib.sha256(blob.encode("utf-8")).hexdigest()
+
+
+def stamp_path(refs_file: Path) -> Path:
+    return refs_file.with_name(refs_file.stem + ".verified.json")
+
+
+def write_stamp(refs_file: Path, data: dict, summary: str) -> None:
+    stamp = {
+        "sha256": canonical_hash(data),
+        "verified_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "tool": "revealjs-references-verify",
+        "summary": summary,
+    }
+    stamp_path(refs_file).write_text(json.dumps(stamp, indent=2) + "\n", encoding="utf-8")
+
+
+def remove_stamp(refs_file: Path) -> None:
+    try:
+        stamp_path(refs_file).unlink()
+    except FileNotFoundError:
+        pass
+
+
+def check_stamps(files) -> int:
+    """Offline: confirm each references.json matches its validation stamp."""
+    bad = 0
+    for f in files:
+        try:
+            data = json.loads(f.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            print(f"{f}: UNREADABLE — {exc}"); bad += 1; continue
+        sp = stamp_path(f)
+        if not sp.exists():
+            print(f"{f}: UNVERIFIED — no stamp; run the verifier"); bad += 1; continue
+        try:
+            stamp = json.loads(sp.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            print(f"{f}: STAMP UNREADABLE — {exc}"); bad += 1; continue
+        if stamp.get("sha256") == canonical_hash(data):
+            print(f"{f}: VALIDATED ({stamp.get('verified_at', '?')})")
+        else:
+            print(f"{f}: STALE — changed since verification; re-run the verifier"); bad += 1
+    print(f"\n{len(files)} file(s) · {len(files) - bad} validated · {bad} need attention")
+    return 1 if bad else 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Verify references.json DOIs/metadata against Crossref.")
     ap.add_argument("paths", nargs="+", help="references.json files, or dirs to search recursively")
@@ -285,12 +341,17 @@ def main() -> int:
                     help="apply the safe fix subset (fill a high-confidence DOI; correct a confirmed year)")
     ap.add_argument("--yes", action="store_true",
                     help="with --fix, write changes; otherwise --fix is a dry run")
+    ap.add_argument("--check", action="store_true",
+                    help="offline: confirm each references.json matches its validation stamp; no Crossref calls")
     args = ap.parse_args()
 
     files = collect_files(args.paths)
     if not files:
         print("no references.json files found", file=sys.stderr)
         return 2
+
+    if args.check:
+        return check_stamps(files)
 
     total = ok = skip = issue = 0
     fixes_applied = 0
@@ -302,30 +363,43 @@ def main() -> int:
             print(f"  COULD NOT READ — {exc}")
             issue += 1
             continue
+        file_ok = file_skip = file_issue = 0
         file_fixes = {}
         for key in sorted(data):
             total += 1
             status, lines, fix = check_ref(
                 key, data[key], suggest_missing=args.suggest_missing, fix_mode=args.fix
             )
-            ok += status == "ok"
-            skip += status == "skip"
-            issue += status == "issue"
+            file_ok += status == "ok"
+            file_skip += status == "skip"
+            file_issue += status == "issue"
             for line in lines:
                 print(f"  {line}")
             if args.fix and fix:
                 file_fixes[key] = fix
             time.sleep(REQUEST_PAUSE)
+        ok += file_ok
+        skip += file_skip
+        issue += file_issue
 
-        if args.fix and file_fixes:
-            for key, fix in file_fixes.items():
-                data[key].update(fix)
-            if args.yes:
-                f.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-                fixes_applied += len(file_fixes)
-                print(f"  → applied {len(file_fixes)} fix(es) to {f}")
+        if args.fix:
+            if file_fixes:
+                for key, fix in file_fixes.items():
+                    data[key].update(fix)
+                if args.yes:
+                    f.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+                    fixes_applied += len(file_fixes)
+                    print(f"  → applied {len(file_fixes)} fix(es) to {f}")
+                    remove_stamp(f)  # fixed content is not yet validated clean; force a re-run
+                else:
+                    print(f"  → {len(file_fixes)} fix(es) proposed (dry run; pass --yes to write)")
+        else:
+            # Stamp only a genuinely clean file; otherwise drop any stale stamp.
+            if file_issue == 0:
+                write_stamp(f, data, f"{file_ok} ok · {file_skip} skipped")
+                print(f"  ✓ validated — stamp written ({stamp_path(f).name})")
             else:
-                print(f"  → {len(file_fixes)} fix(es) proposed (dry run; pass --yes to write)")
+                remove_stamp(f)
 
     print(f"\n{total} refs · {ok} ok · {skip} skipped · {issue} issue(s)", end="")
     if args.fix:

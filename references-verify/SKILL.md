@@ -35,8 +35,24 @@ python3 "$SKILL_DIR/scripts/verify_references.py" path/to/references.json
     already match (so the DOI is confirmed and only the year is off).
   It never rewrites titles or authors and never writes a low-confidence DOI —
   those are left flagged for the agent fix-loop below.
+- `--check` — offline guard: confirm each `references.json` still matches its
+  validation stamp (see below). No Crossref calls; exits non-zero if any file
+  is stale or unstamped. Use it in a pre-push hook.
 - `CROSSREF_MAILTO=you@example.com` (env) joins Crossref's polite pool.
-- Pure standard library; no `pip install` needed. Network access required.
+- Pure standard library; no `pip install` needed. Network access required
+  (except `--check`, which is offline).
+
+## Validation stamp
+
+A clean run (no `--fix`, no issues) writes `<name>.verified.json` beside the
+references file — a SHA-256 of the *data* (formatting-independent), a timestamp,
+and a one-line summary. Commit it alongside `references.json`.
+
+`--check` recomputes the hash and reports `VALIDATED` / `STALE` (content changed
+since verification) / `UNVERIFIED` (no stamp). `--fix --yes` removes the stamp,
+so fixed content must be re-verified before it counts as validated. This gives a
+fast, offline answer to "have these citations been checked since they last
+changed?" — ideal in a `pre-push` hook to stop unverified references shipping.
 
 ## How To Interpret Results
 
