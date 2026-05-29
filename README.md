@@ -97,6 +97,24 @@ python3 revealjs-tools/references-verify/scripts/verify_references.py site/   # 
 candidate DOIs (it never writes them back). Pure standard library; needs
 network access. Set `CROSSREF_MAILTO` to join Crossref's polite pool.
 
+### `cover-art`
+
+Generates a consistent series of clean line-art cover / divider illustrations
+with gpt-image-2, and captures the prompt-craft and layout choices that make
+the set look uniform and read clearly.
+
+```sh
+OPENAI_API_KEY=sk-... python3 revealjs-tools/cover-art/scripts/gen_cover.py \
+  --slot illus-img \
+  --prompt "<shared style block>  <this image's metaphor>" \
+  --out assets/divider1.png
+```
+
+`gen_cover.py` also exposes `generate()` / `generate_series()` so a small
+driver can render a whole set in parallel from one shared style string. See
+`cover-art/SKILL.md` for the style recipe, the half-slide-vs-full-bleed
+decision, the `object-fit` crop note, and the metaphor-legibility lessons.
+
 ## Agent Skills
 
 Each tool folder contains a `SKILL.md` for AI agents:
@@ -106,6 +124,7 @@ Each tool folder contains a `SKILL.md` for AI agents:
 - `slide-screenshot/SKILL.md`
 - `references/SKILL.md`
 - `references-verify/SKILL.md`
+- `cover-art/SKILL.md`
 
 These describe when to use the tool, the exact commands, and how to interpret
 or apply the results.
@@ -126,12 +145,14 @@ mkdir -p \
   "$SKILLS_DIR/revealjs-references" \
   "$SKILLS_DIR/revealjs-references-verify" \
   "$SKILLS_DIR/revealjs-slide-comments" \
-  "$SKILLS_DIR/revealjs-slide-screenshot"
+  "$SKILLS_DIR/revealjs-slide-screenshot" \
+  "$SKILLS_DIR/revealjs-cover-art"
 cp -R check-overflow/. "$SKILLS_DIR/revealjs-overflow-checker/"
 cp -R references/. "$SKILLS_DIR/revealjs-references/"
 cp -R references-verify/. "$SKILLS_DIR/revealjs-references-verify/"
 cp -R slide-comments/. "$SKILLS_DIR/revealjs-slide-comments/"
 cp -R slide-screenshot/. "$SKILLS_DIR/revealjs-slide-screenshot/"
+cp -R cover-art/. "$SKILLS_DIR/revealjs-cover-art/"
 ```
 
 Or symlink them so local edits in this checkout are picked up immediately:
@@ -144,6 +165,7 @@ ln -sfn "$PWD/references" "$SKILLS_DIR/revealjs-references"
 ln -sfn "$PWD/references-verify" "$SKILLS_DIR/revealjs-references-verify"
 ln -sfn "$PWD/slide-comments" "$SKILLS_DIR/revealjs-slide-comments"
 ln -sfn "$PWD/slide-screenshot" "$SKILLS_DIR/revealjs-slide-screenshot"
+ln -sfn "$PWD/cover-art" "$SKILLS_DIR/revealjs-cover-art"
 ```
 
 Set `SKILLS_DIR` explicitly when installing for an agent that uses a different
