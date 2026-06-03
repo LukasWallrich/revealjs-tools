@@ -58,7 +58,11 @@ Load the script after Reveal.js and after the bibliography placeholder exists:
 
 - Empty narrative cite becomes `Smith & Jones (2020)`.
 - Empty parenthetical cite becomes `(Smith & Jones, 2020)`.
-- DOI entries link to `https://doi.org/...`.
+- DOI entries link to `https://doi.org/...` (DOI-less entries fall back to `url`).
+- Adjacent empty `parens` cites auto-group into a single bracket:
+  `<cite key="a" parens></cite> <cite key="b" parens></cite>` →
+  `(A, 2024; B, 2025)`. Only whitespace may sit between them; a cite with
+  explicit text or a non-cite node breaks the run.
 
 ## Validation Workflow
 
@@ -72,3 +76,14 @@ source claim is being removed, because those tags are the source of truth for
 used-reference validation. Do not hand-write the bibliography in static HTML
 unless the user explicitly wants to stop using the citation system; `citations.js`
 owns bibliography generation and pagination.
+
+`processCitations` is idempotent: a cite that already holds a rendered `<a>`,
+or was merged into a group (`data-cite-merged`), is left untouched. So it is
+safe to re-run against DOM that already has rendered cites — e.g. after the
+slide-comments overlay saves rendered HTML back to source. Without this, a
+re-run would double-bracket parenthetical cites (`(Author (Year))`).
+
+`REFS_PER_PAGE` (top of the script) is a per-deck tuning value — how many
+references fit one bibliography slide, given that deck's reference count and
+font size. The bundled default is 7; adjust per deck and re-run the overflow
+checker rather than assuming one value fits every deck.

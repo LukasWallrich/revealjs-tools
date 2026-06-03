@@ -55,6 +55,37 @@
     return `(${shortAuthors(ref)}, ${ref.year})`;
   }
 
+  // Inner parenthetical (no brackets), used when grouping adjacent cites:
+  //   "Author, Year"  →  joined as "(A, 2024; B, 2025)"
+  function formatInnerParenthetical(ref) {
+    return `${shortAuthors(ref)}, ${ref.year}`;
+  }
+
+  function citeHref(ref) {
+    return ref.doi ? `https://doi.org/${ref.doi}` : (ref.url || null);
+  }
+
+  // Build a linked <a> (or a bare text node when there is no DOI/url)
+  function linkedNode(text, ref) {
+    const href = citeHref(ref);
+    if (!href) return document.createTextNode(text);
+    const a = document.createElement('a');
+    a.href = href;
+    a.target = '_blank';
+    a.textContent = text;
+    return a;
+  }
+
+  // An unrendered parenthetical cite with a valid key, eligible for grouping.
+  function isGroupableParensCite(node) {
+    return node && node.nodeType === 1 && node.tagName === 'CITE'
+      && node.hasAttribute('parens') && node.hasAttribute('key')
+      && references[node.getAttribute('key')]
+      && !node.querySelector('a')                  // not already rendered
+      && !node.hasAttribute('data-cite-merged')    // not already merged away
+      && !node.textContent.trim();                 // no explicit text
+  }
+
   // Format a full bibliography entry
   function formatBibEntry(key, ref) {
     let entry = `${ref.authors} (${ref.year}). ${ref.title}.`;
@@ -84,11 +115,18 @@
     return entry;
   }
 
-  // Process all citation elements
+  // Process all citation elements. Idempotent: a cite that already holds a
+  // rendered <a>, or has been merged into a group, is left untouched — so it
+  // is safe to re-run after the rendered DOM has been saved back to source
+  // (as the slide-comments overlay does).
   function processCitations() {
-    const cites = document.querySelectorAll('cite[key]');
+    const cites = Array.from(document.querySelectorAll('cite[key]'));
+    const handled = new Set();
 
     cites.forEach(cite => {
+      if (handled.has(cite)) return;
+      if (cite.hasAttribute('data-cite-merged')) return;   // emptied by a prior group
+
       const key = cite.getAttribute('key');
 
       if (!references[key]) {
@@ -96,34 +134,54 @@
         cite.style.color = 'red';
         cite.style.fontWeight = 'bold';
         cite.title = `Missing reference: ${key}`;
-        if (!cite.textContent.trim()) {
-          cite.textContent = `[MISSING: ${key}]`;
-        }
+        if (!cite.textContent.trim()) cite.textContent = `[MISSING: ${key}]`;
         return;
       }
 
       citedKeys.add(key);
+
+      // Already rendered (contains a link) → leave as-is. Prevents the
+      // "(Author, Year)" → "(Author (Year))" double-bracket on re-runs.
+      if (cite.querySelector('a')) { handled.add(cite); return; }
+
+      // Group a run of adjacent parenthetical cites into one bracket:
+      //   <cite parens></cite> <cite parens></cite>  →  (A, 2024; B, 2025)
+      if (cite.hasAttribute('parens') && !cite.textContent.trim()) {
+        const group = [cite];
+        let node = cite.nextSibling;
+        while (node) {
+          if (node.nodeType === 3 && !node.textContent.trim()) { node = node.nextSibling; continue; }
+          if (isGroupableParensCite(node)) { group.push(node); node = node.nextSibling; continue; }
+          break;
+        }
+        if (group.length > 1) {
+          cite.textContent = '';
+          cite.appendChild(document.createTextNode('('));
+          group.forEach((c, i) => {
+            const ref = references[c.getAttribute('key')];
+            citedKeys.add(c.getAttribute('key'));
+            if (i > 0) {
+              cite.appendChild(document.createTextNode('; '));
+              c.textContent = '';
+              c.setAttribute('data-cite-merged', '');
+              handled.add(c);
+            }
+            cite.appendChild(linkedNode(formatInnerParenthetical(ref), ref));
+          });
+          cite.appendChild(document.createTextNode(')'));
+          handled.add(cite);
+          return;
+        }
+      }
+
+      // Single cite
       const ref = references[key];
-
-      // If no text content, auto-fill based on parens attribute
-      if (!cite.textContent.trim()) {
-        cite.textContent = cite.hasAttribute('parens')
-          ? formatParentheticalCite(ref)   // (Author, Year)
-          : formatShortCite(ref);           // Author (Year)
-      } else {
-        // Normalise "Name, Year" → "Name (Year)" in explicit text
-        cite.textContent = cite.textContent.replace(/,\s*(\d{4})\b/, ' ($1)');
-      }
-
-      // Wrap in link to DOI
-      if (ref.doi) {
-        const link = document.createElement('a');
-        link.href = `https://doi.org/${ref.doi}`;
-        link.textContent = cite.textContent;
-        link.target = '_blank';
-        cite.textContent = '';
-        cite.appendChild(link);
-      }
+      const text = cite.textContent.trim()
+        ? cite.textContent.replace(/,\s*(\d{4})\b/, ' ($1)')   // explicit text: "Name, Year" → "Name (Year)"
+        : (cite.hasAttribute('parens') ? formatParentheticalCite(ref) : formatShortCite(ref));
+      cite.textContent = '';
+      cite.appendChild(linkedNode(text, ref));
+      handled.add(cite);
     });
   }
 
